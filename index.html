@@ -38,6 +38,8 @@ canvas{width:100%;display:block}
 .lad div{padding:7px 10px;border:1px solid var(--bd);border-radius:8px;margin:5px 0;font-size:13.5px}.lad div.hl{border-color:var(--ac);background:var(--bg)}
 .tw{overflow-x:auto}.ap table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}.ap td,.ap th{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left;vertical-align:top}.ap th{color:var(--mut);font-weight:600}
 .qs{border-left:3px solid var(--ac);padding-left:10px}
+.ok{color:#1D9E75}.no{color:#c0392b}.ap tr.sel td{background:var(--bg)}.ap tr.rec td:first-child{font-weight:600}
+#dtx{width:100%;min-height:130px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}input[type=file]{width:100%;font-size:13px}
 .fl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}.fl div{border:1px solid var(--bd);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--bg)}.fl span{color:var(--mut)}.ap h3{font-size:14px;margin:14px 0 4px}
 .demo{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}.dch canvas{margin-bottom:8px}@media(max-width:860px){.demo{grid-template-columns:1fr}}
 </style>
@@ -49,7 +51,7 @@ canvas{width:100%;display:block}
 </head>
 <body>
 <header><h1>Simulator Tuning PID</h1><p>Pilih kasus proses, pilih metoda tuning atau atur P, I, D secara manual, lalu amati respons pada grafik.</p></header>
-<div class="tabs"><button id="tb1" class="on">Simulator PID</button><button id="tbp">Pengantar PID</button><button id="tb2">Pengantar APC</button><button id="inst" hidden style="margin-left:auto">Pasang aplikasi</button></div>
+<div class="tabs"><button id="tb1" class="on">Simulator PID</button><button id="tbd">Tuning dari Data</button><button id="tbp">Pengantar PID</button><button id="tb2">Pengantar APC</button><button id="inst" hidden style="margin-left:auto">Pasang aplikasi</button></div>
 <div id="v1"><div class="wrap">
 <div class="card" id="ctl">
 <h2>Pengaturan</h2>
@@ -71,6 +73,29 @@ canvas{width:100%;display:block}
 <div class="card"><h2>Output kontroler (CV, %)</h2><canvas id="c2" height="170"></canvas></div>
 <div class="card"><h2>Indikator kinerja (run aktif)</h2><div class="mt" id="mt2"></div><p class="note" id="desc"></p></div>
 </div>
+</div></div>
+<div id="v4" hidden><div class="wrap ap" style="grid-template-columns:minmax(0,1fr)">
+<div class="card"><h2>1. Data uji step (MV dan PV)</h2>
+<p>Tempel data uji step <b>open loop</b>: kontroler di mode manual, PV stabil di awal, lalu MV diubah bertahap. Format 3 kolom <code>waktu(detik), MV, PV</code>, atau 2 kolom <code>MV, PV</code> dengan periode sampel di bawah. Pemisah boleh koma, titik koma, tab, atau spasi. Baris judul dilewati. Aplikasi akan mengidentifikasi model proses (K, τ, θ), menghitung beberapa kandidat Kp, Ti, Td, lalu menguji kestabilannya.</p>
+<textarea id="dtx" placeholder="waktu,MV,PV&#10;0,40,100.1&#10;2,40,99.9&#10;..."></textarea>
+<div class="row3"><div><label>Periode sampel (detik, untuk data 2 kolom)</label><input type="number" id="dts" value="1" min="0.001" step="any"></div><div><label>Tipe proses</label><select id="dty"><option value="auto">Otomatis</option><option value="self">Self-regulating (temperatur, tekanan, kecepatan)</option><option value="int">Integrator (level)</option></select></div><div><label>Atau pilih file CSV</label><input type="file" id="dfl" accept=".csv,.txt,text/plain"></div></div>
+<div class="btns"><button class="p" id="dgo">Analisis dan hitung tuning</button><button id="dx1">Muat contoh proses biasa</button><button id="dx2">Muat contoh integrator (level)</button></div>
+<p class="note" id="dmsg"></p></div>
+<div class="card" id="dres" hidden><h2>2. Hasil identifikasi model</h2>
+<div class="mt" id="dmod"></div>
+<div class="leg"><span><i style="background:var(--c1)"></i>Biru: PV data</span><span><i style="background:var(--c2)"></i>Oranye putus-putus: PV model hasil identifikasi</span></div>
+<canvas id="c5" height="220"></canvas>
+<div class="leg"><span><i style="background:var(--c3)"></i>Hijau: MV data</span></div><canvas id="c6" height="110"></canvas>
+<ul id="dwr"></ul></div>
+<div class="card" id="dtn" hidden><h2>3. Kandidat tuning dan rekomendasi</h2>
+<p>Tiap kandidat disimulasikan pada model hasil identifikasi (step setpoint), lalu diuji ketahanannya terhadap kesalahan model: gain +50% dengan dead time +30%, serta dead time +50% dengan τ −30%. Rekomendasi adalah kandidat yang stabil pada semua uji, overshoot kecil (maksimal 15%, atau 25% untuk integrator karena PI pada integrator wajar overshoot saat step setpoint), dan settling tercepat. Klik baris untuk memilih kandidat lain.</p>
+<div class="tw"><table id="dtb"></table></div></div>
+<div class="card" id="dsl" hidden><h2>4. Parameter terpilih dan simulasi</h2>
+<div class="mt" id="dpar"></div>
+<div class="leg"><span><i style="background:var(--sp)"></i>Abu-abu: step setpoint (dinormalisasi = 1)</span><span><i style="background:var(--c1)"></i>Biru: respons pada model hasil identifikasi</span><span><i style="background:var(--c2)"></i>Oranye putus-putus: gain +50%, dead time +30%</span><span><i style="background:var(--c3)"></i>Hijau putus-putus: dead time +50%, τ −30%</span></div>
+<canvas id="c7" height="240"></canvas>
+<div class="btns"><button class="p" id="dcp">Salin parameter</button><button id="dsm">Kirim ke Simulator PID</button></div>
+<p class="note" id="dnt"></p></div>
 </div></div>
 <div id="v3" hidden><div class="wrap ap" style="grid-template-columns:minmax(0,1fr)">
 <div class="card"><h2>1. Apa itu PID?</h2>
@@ -307,8 +332,140 @@ function dmcRun(){
  chart($("c4"),s4,[0,umax],N);
  const pk=Math.max(...y.slice(5,80));$("dn").textContent="Puncak PV sebelum gangguan: "+pk.toFixed(2)+" (setpoint 1,00)"+(pk>1.02?", artinya overshoot "+((pk-1)*100).toFixed(0)+"%.":", praktis tanpa overshoot.")+(Math.max(...uu)>=umax-1e-6?" MV sempat menyentuh batas atas, jadi respons diperlambat oleh constraint.":"")+" IAE MPC = "+ia(y)+", IAE PID = "+ia(y2)+" (makin kecil makin baik).";}
 ["dP","dM","dL","dU","dG","dK","dB"].forEach(id=>$(id).addEventListener("input",dmcRun));
-function showTab(n){$("v1").hidden=n!==1;$("v3").hidden=n!==3;$("v2").hidden=n!==2;$("tb1").classList.toggle("on",n===1);$("tbp").classList.toggle("on",n===3);$("tb2").classList.toggle("on",n===2);if(n===1)draw();if(n===2)dmcRun();window.scrollTo(0,0);}
-$("tb1").addEventListener("click",()=>showTab(1));$("tbp").addEventListener("click",()=>showTab(3));$("tb2").addEventListener("click",()=>showTab(2));
+/*DATA-START*/
+const DS={},med=a=>{const s=a.slice().sort((x,y)=>x-y);return s[Math.floor(s.length/2)];},mean=a=>a.reduce((q,v)=>q+v,0)/a.length;
+function parseData(txt,Ts){
+ const rows=[];
+ for(const ln of txt.split(/\r?\n/)){const s=ln.trim();if(!s)continue;
+  let p=s.includes(";")?s.split(";").map(x=>x.trim().replace(",",".")):s.split(/[,\t ]+/);
+  p=p.filter(x=>x!=="");const v=p.map(Number);
+  if(v.length&&v.every(isFinite))rows.push(v);}
+ if(rows.length<10)throw new Error("Data terlalu sedikit. Dibutuhkan minimal 10 baris angka.");
+ const c=rows[0].length;if(c<2||c>3)throw new Error("Gunakan 2 kolom (MV, PV) atau 3 kolom (waktu, MV, PV).");
+ const t=[],u=[],y=[];
+ rows.filter(r=>r.length===c).forEach((r,i)=>{t.push(c===3?r[0]:i*Ts);u.push(r[c-2]);y.push(r[c-1]);});
+ for(let i=1;i<t.length;i++)if(!(t[i]>t[i-1]))throw new Error("Kolom waktu harus terus naik.");
+ const t0=t[0];return{t:t.map(v=>v-t0),u,y};}
+function simModel(d,m,b){
+ const {t,u}=d,n=t.length,out=new Array(n);let x=0,j=0;out[0]=b.y0;
+ for(let i=1;i<n;i++){const dt=t[i]-t[i-1],td=t[i-1]-m.th;
+  while(j+1<n&&t[j+1]<=td)j++;
+  const ud=td<t[0]?b.u0:u[j];
+  if(m.int)x+=dt*m.K*(ud-b.u0);else x+=(1-Math.exp(-dt/m.tau))*(m.K*(ud-b.u0)-x);
+  out[i]=b.y0+x;}
+ return out;}
+function sse(d,m,b){const ym=simModel(d,m,b);let s=0;for(let i=0;i<ym.length;i++)s+=(ym[i]-d.y[i])**2;return isFinite(s)?s:1e30;}
+function nm(f,x0,st,it){
+ const n=x0.length;let S=[x0.slice()];
+ for(let i=0;i<n;i++){const p=x0.slice();p[i]+=st[i];S.push(p);}
+ let F=S.map(f);
+ for(let k=0;k<it;k++){
+  const o=F.map((v,i)=>i).sort((a,b)=>F[a]-F[b]);S=o.map(i=>S[i]);F=o.map(i=>F[i]);
+  const c=Array(n).fill(0);for(let i=0;i<n;i++)for(let j=0;j<n;j++)c[j]+=S[i][j]/n;
+  const w=S[n],mv=a=>c.map((v,j)=>v+a*(w[j]-v)),xr=mv(-1),fr=f(xr);
+  if(fr<F[0]){const xe=mv(-2),fe=f(xe);if(fe<fr){S[n]=xe;F[n]=fe;}else{S[n]=xr;F[n]=fr;}}
+  else if(fr<F[n-1]){S[n]=xr;F[n]=fr;}
+  else{const xc=mv(fr<F[n]?-0.5:0.5),fc=f(xc);
+   if(fc<Math.min(fr,F[n])){S[n]=xc;F[n]=fc;}else{for(let i=1;i<=n;i++){S[i]=S[0].map((v,j)=>v+0.5*(S[i][j]-v));F[i]=f(S[i]);}}}}
+ const b=F.indexOf(Math.min(...F));return[S[b],F[b]];}
+function identify(d,type){
+ const n=d.t.length,n0=Math.max(3,Math.floor(0.05*n)),u0=mean(d.u.slice(0,n0)),y0=mean(d.y.slice(0,n0)),b={u0,y0};
+ const du=Math.max(...d.u.map(v=>Math.abs(v-u0)));
+ if(!(du>1e-9))throw new Error("MV tidak berubah. Dibutuhkan step pada MV (misalnya 40% ke 50%).");
+ const dy=Math.max(...d.y.map(v=>Math.abs(v-y0)));
+ if(!(dy>1e-9))throw new Error("PV tidak merespons perubahan MV.");
+ const ks=d.u.findIndex(v=>Math.abs(v-u0)>0.1*du),ts=d.t[ks],Ts=med(d.t.slice(1).map((v,i)=>v-d.t[i]));
+ const ue=mean(d.u.slice(-n0)),ye=mean(d.y.slice(-n0)),endStep=Math.abs(ue-u0)>0.1*du;
+ let K0=endStep?(ye-y0)/(ue-u0):dy/du;if(!isFinite(K0)||K0===0)K0=dy/du;
+ const tgt=ye-y0,after=d.t.map((v,i)=>i).filter(i=>d.t[i]>=ts);
+ const find=fr=>{const i=after.find(i=>Math.abs(d.y[i]-y0)>=fr*Math.abs(tgt));return i===undefined?null:d.t[i]-ts;};
+ let th0=find(0.05);th0=th0===null?2*Ts:Math.max(th0,0.5*Ts);
+ const t63=find(0.632),tau0=Math.max(t63===null?(d.t[n-1]-ts)/3:t63-th0,2*Ts);
+ const mF=p=>({K:p[0],tau:Math.exp(p[1]),th:p[2]*p[2],int:false});
+ const fits=[[K0,Math.log(tau0),Math.sqrt(th0)],[K0,Math.log(tau0*0.4),Math.sqrt(th0*1.6)]].map(x=>nm(p=>sse(d,mF(p),b),x,[Math.abs(K0)*0.2+1e-6,0.4,Math.max(0.3*Math.sqrt(th0),0.2)],500)).sort((a,c)=>a[1]-c[1]);
+ const F={m:mF(fits[0][0]),sse:fits[0][1]};
+ const k0=Math.floor(0.7*n),tt=d.t.slice(k0),yy=d.y.slice(k0),mt=mean(tt),my=mean(yy);let sl=0,sd=0;
+ tt.forEach((v,i)=>{sl+=(v-mt)*(yy[i]-my);sd+=(v-mt)**2;});sl/=sd;
+ const Ki0=sl/(endStep?(ue-u0):du)||1e-6,mI=p=>({K:p[0],tau:0,th:p[1]*p[1],int:true});
+ const fi=[[Ki0,Math.sqrt(th0)],[Ki0,Math.sqrt(th0*2)]].map(x=>nm(p=>sse(d,mI(p),b),x,[Math.abs(Ki0)*0.2+1e-9,Math.max(0.3*Math.sqrt(th0),0.2)],400)).sort((a,c)=>a[1]-c[1]);
+ const I={m:mI(fi[0][0]),sse:fi[0][1]};
+ const R=type==="int"?I:type==="self"?F:(I.sse<0.7*F.sse?I:F),m=R.m;
+ const mu=mean(d.y),sst=d.y.reduce((q,v)=>q+(v-mu)**2,0),fit=Math.max(0,100*(1-Math.sqrt(R.sse/sst))),warn=[];
+ if(m.th<Ts/2)warn.push("Dead time hasil identifikasi lebih kecil dari setengah periode sampel. Aplikasi memakai θ = Ts/2 untuk perhitungan tuning. Gunakan sampling lebih rapat untuk hasil lebih pasti.");
+ if(fit<80)warn.push("Kecocokan model di bawah 80%. Penyebab umum: noise besar, gangguan saat uji, proses nonlinear, atau uji step terlalu kecil. Ulangi uji dengan kondisi lebih tenang.");
+ if(!m.int&&d.t[n-1]-ts<4*m.tau+m.th)warn.push("Data berakhir sebelum PV mencapai kondisi tunak (kurang dari sekitar 4τ setelah step). Perpanjang pengambilan data.");
+ if(!m.int&&m.tau<3*Ts)warn.push("τ hanya beberapa kali periode sampel, jadi model kurang akurat. Gunakan sampling lebih rapat.");
+ if(type==="auto")warn.push("Tipe proses dipilih otomatis ("+(m.int?"integrator":"self-regulating")+"). Ganti manual jika tidak sesuai dengan proses sebenarnya.");
+ return{m,b,fit,ym:simModel(d,m,b),Ts,ts,y0,u0,warn};}
+function simcT(p,f){const tc=f*p.th;return p.int?{kp:1/(p.K*(tc+p.th)),ti:4*(tc+p.th),td:0}:{kp:p.tau/(p.K*(tc+p.th)),ti:Math.min(p.tau,4*(tc+p.th)),td:0};}
+function cl(p,c,k,Th){
+ const m={K:p.K*k.K,tau:p.tau*k.tau,th:p.th*k.th},kp=c.kp,ti=c.ti,td=c.td;
+ let dt=Math.min(Th/2000,m.th/5);dt=Math.max(dt,Th/12000);
+ const N=Math.ceil(Th/dt),nd=Math.round(m.th/dt),buf=new Array(nd).fill(0),a=p.int?0:Math.exp(-dt/m.tau);
+ let x=0,I=0,dp=0,xp=0,ok=true;const t=[],y=[];
+ for(let i=0;i<=N;i++){
+  const e=1-x;
+  if(td>0){const Tf=td/8;dp=(Tf*dp-kp*td*(x-xp))/(Tf+dt);}
+  const u=kp*e+I+dp;if(ti>0)I+=dt*kp/ti*e;
+  xp=x;t.push(i*dt);y.push(x);buf.push(u);const ud=buf.shift();
+  x=p.int?x+dt*m.K*ud:a*x+(1-a)*m.K*ud;
+  if(!isFinite(x)||Math.abs(x)>1e6){ok=false;break;}}
+ let tl=0,mx=-1e9;y.forEach((v,i)=>{if(v>mx)mx=v;if(Math.abs(v-1)>0.02)tl=t[i];});
+ ok=ok&&Math.abs(y[y.length-1]-1)<0.05&&tl<0.95*Th;
+ return{t,y,ok,os:Math.max(0,(mx-1)*100),ts:tl};}
+function makeCands(pe){
+ const L=[["Ziegler–Nichols","PI",tune("zn","PI",pe)],["Ziegler–Nichols","PID",tune("zn","PID",pe)],["Cohen–Coon","PI",tune("cc","PI",pe)],["Cohen–Coon","PID",tune("cc","PID",pe)],["IMC / Lambda","PI",tune("imc","PI",pe)],["IMC / Lambda","PID",tune("imc","PID",pe)],["SIMC (τc = θ)","PI",simcT(pe,1)],["SIMC (τc = 2θ)","PI",simcT(pe,2)],["SIMC (τc = 3θ)","PI",simcT(pe,3)]].map(a=>Object.assign({n:a[0],tp:a[1]},a[2]));
+ const Th=Math.max(pe.int?30*pe.th:7*pe.tau+10*pe.th,5*Math.max(...L.map(q=>q.ti)));
+ L.forEach(q=>{q.Th=Th;q.nom=cl(pe,q,{K:1,tau:1,th:1},Th);const a=cl(pe,q,{K:1.5,tau:1,th:1.3},Th),b=cl(pe,q,{K:1,tau:0.7,th:1.5},Th);q.p=[a,b];q.rb=q.nom.ok&&a.ok&&b.ok&&a.os<=40&&b.os<=40;});
+ let g=L.map((q,i)=>i).filter(i=>L[i].rb&&L[i].nom.os<=(pe.int?25:15));
+ if(!g.length)g=L.map((q,i)=>i).filter(i=>L[i].rb);
+ const rec=g.length?g.reduce((a,b)=>L[b].nom.ts<L[a].nom.ts?b:a):L.length-1;
+ return{list:L,rec};}
+function analyze(){
+ const msg=$("dmsg");msg.style.color="";msg.textContent="";
+ try{
+  const Ts=+$("dts").value;if(!(Ts>0))throw new Error("Periode sampel harus lebih dari 0.");
+  const d=parseData($("dtx").value,Ts),r=identify(d,$("dty").value);
+  const pe={K:Math.abs(r.m.K),tau:r.m.tau,th:Math.max(r.m.th,r.Ts/2),int:r.m.int},c=makeCands(pe);
+  Object.assign(DS,{d,r,pe,c,sel:c.rec});
+  ["dres","dtn","dsl"].forEach(i=>$(i).hidden=false);renderData();
+ }catch(e){msg.style.color="#c0392b";msg.textContent=e.message;}}
+function cp(a){return{x:a.t,y:a.y.map(v=>Math.max(-2,Math.min(3,v)))};}
+function renderData(){
+ if(!DS.r)return;const {d,r,c}=DS,m=r.m,q=c.list[DS.sel],T=d.t[d.t.length-1];
+ $("dmod").innerHTML=[["Tipe proses",m.int?"Integrator + dead time":"FOPDT (self-regulating)"],[m.int?"K′ (PV/detik per MV)":"K (PV per MV)",fm(m.K)],...(m.int?[]:[["τ (detik)",fm(m.tau)]]),["θ dead time (detik)",fm(m.th)],["Kecocokan model",r.fit.toFixed(1)+" %"]].map(a=>`<div class="m"><span>${a[0]}</span><b>${a[1]}</b></div>`).join("");
+ chart($("c5"),[{x:d.t,y:d.y,c:css("--c1"),w:1.6},{x:d.t,y:r.ym,c:css("--c2"),d:[6,4],w:2.2}],null,T);
+ chart($("c6"),[{x:d.t,y:d.u,c:css("--c3"),w:2}],null,T);
+ $("dwr").innerHTML=r.warn.map(w=>`<li>${w}</li>`).join("");
+ $("dtb").innerHTML="<tr><th>Metoda</th><th>Tipe</th><th>Kp</th><th>Ti (s)</th><th>Td (s)</th><th>Overshoot</th><th>Settling (s)</th><th>Robust</th></tr>"+c.list.map((z,i)=>`<tr class="${i===c.rec?"rec ":""}${i===DS.sel?"sel":""}" onclick="pick(${i})" style="cursor:pointer"><td>${z.n}${i===c.rec?" (rekomendasi)":""}</td><td>${z.tp}</td><td>${fm(z.kp)}</td><td>${fm(z.ti)}</td><td>${fm(z.td)}</td><td>${z.nom.ok?z.nom.os.toFixed(0)+" %":"tidak stabil"}</td><td>${z.nom.ok?fm(z.nom.ts):"–"}</td><td class="${z.rb?"ok":"no"}">${z.rb?"ya":"tidak"}</td></tr>`).join("");
+ $("dpar").innerHTML=[["Kp",fm(q.kp)],["Ti",fm(q.ti)+" s ("+fm(q.ti/60)+" menit)"],["Td",q.td?fm(q.td)+" s":"0 (tanpa D)"],["Ki = Kp/Ti",fm(q.kp/q.ti)+" per detik"],["Kd = Kp·Td",fm(q.kp*q.td)],["Proportional band",fm(100/q.kp)+" % (bila PV dan MV dalam persen)"]].map(a=>`<div class="m"><span>${a[0]}</span><b>${a[1]}</b></div>`).join("");
+ const a=cp(q.nom),b=cp(q.p[0]),e=cp(q.p[1]);
+ chart($("c7"),[{x:[0,0,q.Th],y:[0,1,1],c:css("--sp"),w:1.5},{x:a.x,y:a.y,c:css("--c1"),w:2.4},{x:b.x,y:b.y,c:css("--c2"),d:[6,4],w:1.8},{x:e.x,y:e.y,c:css("--c3"),d:[6,4],w:1.8}],null,q.Th);
+ $("dnt").textContent=(m.K<0?"K negatif: gunakan aksi kontroler direct acting. ":"K positif: umumnya dipakai aksi reverse acting (PV naik, output turun). ")+"Kp dalam satuan MV per satuan PV. Hasil ini adalah tuning awal berdasarkan model hasil identifikasi: uji di plant dengan perubahan setpoint kecil dan batas output yang aman, lalu stel ulang jika perlu."+(q.rb?"":" Kandidat ini tidak lolos uji ketahanan, jadi pilih kandidat yang lebih konservatif.");}
+function pick(i){DS.sel=i;renderData();}
+function toSim(){
+ const {r,pe,c}=DS,q=c.list[DS.sel],m=r.m,K=Math.abs(m.K);
+ CASES.custom={n:"Kustom (dari data)",u:"unit",y0:r.y0,sp:m.int?r.y0+K*pe.th*30:r.y0+K*10,K,tau:m.int?0:m.tau,th:pe.th,T:Math.ceil(m.int?Math.max(40*pe.th,8*q.ti):8*m.tau+10*pe.th),int:m.int?1:0,ds:-10};
+ if(![...$("cs").options].some(o=>o.value==="custom"))$("cs").insertAdjacentHTML("beforeend",'<option value="custom">Kustom (dari data)</option>');
+ $("cs").value="custom";cur="custom";loadCase();$("mt").value="man";setSliders({kp:q.kp,ti:q.ti,td:q.td});run();showTab(1);}
+function loadEx(int){
+ let s=12345;const rnd=()=>{s=(s*1664525+1013904223)%4294967296;return s/4294967296;},gn=()=>{let a=0;for(let i=0;i<6;i++)a+=rnd();return (a-3)/Math.sqrt(0.5);};
+ const Ts=int?1:2,N=int?300:250,t=[],u=[];
+ for(let i=0;i<N;i++){t.push(i*Ts);u.push(i*Ts<(int?30:50)?(int?50:40):(int?55:50));}
+ const m=int?{K:0.005,th:5,int:true,tau:0}:{K:2,tau:60,th:12,int:false},b={u0:u[0],y0:int?50:100},ym=simModel({t,u},m,b),sd=int?0.03:0.06;
+ $("dtx").value="waktu,MV,PV\n"+t.map((v,i)=>`${v},${u[i]},${(ym[i]+sd*gn()).toFixed(3)}`).join("\n");
+ $("dts").value=Ts;$("dty").value=int?"int":"self";analyze();
+ if(!$("dmsg").textContent)$("dmsg").textContent=int?"Contoh dimuat. Parameter asli contoh: K′ = 0,005, θ = 5 s. Bandingkan dengan hasil identifikasi di bawah.":"Contoh dimuat. Parameter asli contoh: K = 2, τ = 60 s, θ = 12 s. Bandingkan dengan hasil identifikasi di bawah.";}
+$("dgo").addEventListener("click",analyze);
+$("dx1").addEventListener("click",()=>loadEx(false));$("dx2").addEventListener("click",()=>loadEx(true));
+$("dfl").addEventListener("change",ev=>{const f=ev.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{$("dtx").value=rd.result;};rd.readAsText(f);});
+$("dcp").addEventListener("click",()=>{const q=DS.c.list[DS.sel],t="Kp = "+fm(q.kp)+"\nTi = "+fm(q.ti)+" s\nTd = "+fm(q.td)+" s";if(navigator.clipboard)navigator.clipboard.writeText(t).catch(()=>{});});
+$("dsm").addEventListener("click",toSim);
+addEventListener("resize",()=>{if(!$("v4").hidden)renderData();});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(!$("v4").hidden)renderData();});
+/*DATA-END*/
+function showTab(n){const M={1:["v1","tb1"],3:["v3","tbp"],2:["v2","tb2"],4:["v4","tbd"]};for(const k in M){$(M[k][0]).hidden=+k!==n;$(M[k][1]).classList.toggle("on",+k===n);}if(n===1)draw();if(n===2)dmcRun();if(n===4)renderData();window.scrollTo(0,0);}
+$("tb1").addEventListener("click",()=>showTab(1));$("tbd").addEventListener("click",()=>showTab(4));$("tbp").addEventListener("click",()=>showTab(3));$("tb2").addEventListener("click",()=>showTab(2));
 window.addEventListener("resize",()=>{if(!$("v2").hidden)dmcRun();});
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(!$("v2").hidden)dmcRun();});
 loadCase();
