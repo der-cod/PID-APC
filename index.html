@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulator Tuning PID</title>
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--tx:#1d1d1b;--mut:#6b6b66;--bd:#dcdcd6;--ac:#185FA5;--c1:#185FA5;--c2:#D85A30;--c3:#1D9E75;--c4:#7F77DD;--sp:#888780;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1a18;--card:#242422;--tx:#ececE8;--mut:#9c9a92;--bd:#3a3a37;--ac:#85B7EB;--c1:#85B7EB;--c2:#F0997B;--c3:#5DCAA5;--c4:#AFA9EC;--sp:#b4b2a9;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1a1a18;--card:#242422;--tx:#ececE8;--mut:#9c9a92;--bd:#3a3a37;--ac:#85B7EB;--c1:#85B7EB;--c2:#F0997B;--c3:#5DCAA5;--c4:#AFA9EC;--sp:#b4b2a9;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:16px 18px 4px}
+h1{font-size:20px;margin:0 0 2px;font-weight:600}
+header p{margin:0;color:var(--mut);font-size:13px}
+.wrap{display:grid;grid-template-columns:330px 1fr;gap:14px;padding:12px 18px 24px;max-width:1280px;margin:0 auto}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.card h2{font-size:13px;margin:0 0 10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+select,input[type=number]{width:100%;padding:7px 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.sl{margin-top:8px}.sl .h{display:flex;justify-content:space-between;font-size:13px}.sl b{font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--ac)}
+button{padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit;cursor:pointer}
+button.p{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.right{display:flex;flex-direction:column;gap:14px;min-width:0}
+canvas{width:100%;display:block}
+.mt{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.m{border:1px solid var(--bd);border-radius:8px;padding:8px 10px}.m span{display:block;font-size:12px;color:var(--mut)}.m b{font-size:17px;font-variant-numeric:tabular-nums}
+.note{font-size:12.5px;color:var(--mut);margin:8px 0 0}
+.leg{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;margin-top:6px}.leg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.tabs{display:flex;gap:6px;padding:10px 18px 0;max-width:1280px;margin:0 auto}.tabs button.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.ap p,.ap li{font-size:14px;margin:6px 0}.ap ul,.ap ol{margin:6px 0;padding-left:20px}.ap code{background:var(--bg);padding:1px 5px;border-radius:5px;font-size:13px}
+.lad div{padding:7px 10px;border:1px solid var(--bd);border-radius:8px;margin:5px 0;font-size:13.5px}.lad div.hl{border-color:var(--ac);background:var(--bg)}
+.tw{overflow-x:auto}.ap table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}.ap td,.ap th{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left;vertical-align:top}.ap th{color:var(--mut);font-weight:600}
+.qs{border-left:3px solid var(--ac);padding-left:10px}
+.fl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0}.fl div{border:1px solid var(--bd);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--bg)}.fl span{color:var(--mut)}.ap h3{font-size:14px;margin:14px 0 4px}
+.demo{display:grid;grid-template-columns:250px minmax(0,1fr);gap:16px;align-items:start}.dch canvas{margin-bottom:8px}@media(max-width:860px){.demo{grid-template-columns:1fr}}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#185FA5">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Simulator PID">
+<link rel="icon" href="icons/icon-192.png"><link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+<header><h1>Simulator Tuning PID</h1><p>Pilih kasus proses, pilih metoda tuning atau atur P, I, D secara manual, lalu amati respons pada grafik.</p></header>
+<div class="tabs"><button id="tb1" class="on">Simulator PID</button><button id="tb2">Pengantar APC</button><button id="inst" hidden style="margin-left:auto">Pasang aplikasi</button></div>
+<div id="v1"><div class="wrap">
+<div class="card" id="ctl">
+<h2>Pengaturan</h2>
+<label>Kasus proses</label><select id="cs"></select>
+<div class="row2"><div><label>Metoda tuning</label><select id="mt">
+<option value="man">Manual</option><option value="zn">Ziegler–Nichols (reaction curve)</option><option value="cc">Cohen–Coon</option><option value="imc">IMC / Lambda</option><option value="simc">SIMC (Skogestad)</option></select></div>
+<div><label>Tipe</label><select id="tp"><option>P</option><option>PI</option><option selected>PID</option></select></div></div>
+<div class="sl"><div class="h"><span>Kp (gain)</span><b id="vkp"></b></div><input type="range" id="kp" min="0" max="10" step="0.001"></div>
+<div class="sl"><div class="h"><span>Ti (waktu integral, detik, 0 = off)</span><b id="vti"></b></div><input type="range" id="ti" min="0" max="10" step="0.01"></div>
+<div class="sl"><div class="h"><span>Td (waktu derivatif, detik)</span><b id="vtd"></b></div><input type="range" id="td" min="0" max="10" step="0.01"></div>
+<label>Parameter proses (model FOPDT / integrator)</label>
+<div class="row3"><div><label style="margin:0" id="lK">K</label><input type="number" id="K" step="any"></div><div><label style="margin:0">τ (s)</label><input type="number" id="tau" step="any"></div><div><label style="margin:0">θ (s)</label><input type="number" id="th" step="any"></div></div>
+<div class="row3"><div><label id="lsp">Setpoint baru</label><input type="number" id="sp" step="any"></div><div><label>Gangguan (% output)</label><input type="number" id="ds" step="any"></div><div><label>Waktu sim (s)</label><input type="number" id="T" step="any"></div></div>
+<div class="btns"><button class="p" id="add">Simpan sebagai pembanding</button><button id="clr">Hapus pembanding</button></div>
+<p class="note">Bentuk ISA: u = Kp·(e + 1/Ti·∫e dt + Td·de/dt). Output dibatasi 0–100% dengan anti-windup. Setpoint naik pada 5% waktu simulasi, gangguan beban masuk pada 55%. Ubah τ atau θ untuk melihat dampak model mismatch.</p>
+</div>
+<div class="right">
+<div class="card"><h2 id="t1">Respons PV</h2><canvas id="c1" height="300"></canvas><div class="leg" id="leg"></div></div>
+<div class="card"><h2>Output kontroler (CV, %)</h2><canvas id="c2" height="170"></canvas></div>
+<div class="card"><h2>Indikator kinerja (run aktif)</h2><div class="mt" id="mt2"></div><p class="note" id="desc"></p></div>
+</div>
+</div></div>
+<div id="v2" hidden><div class="wrap ap" style="grid-template-columns:minmax(0,1fr)">
+<div class="card"><h2>1. Apa itu APC?</h2>
+<p>Advanced Process Control (APC) adalah lapisan kontrol di atas kontrol dasar (PID) pada DCS/PLC. PID mengatur satu variabel dengan satu loop. APC mengatur banyak variabel sekaligus, dengan memperhitungkan interaksi antar variabel, dead time, dan batasan operasi (constraint). Teknologi inti APC di industri proses adalah <b>Model Predictive Control (MPC)</b>.</p>
+<p><b>Analogi:</b> PID seperti pengemudi yang hanya melihat spion dan speedometer, jadi baru bereaksi setelah terjadi selisih. MPC seperti pengemudi yang melihat jalan di depan: tahu ada tikungan beberapa ratus meter lagi, sehingga mulai melambat lebih awal dan tetap berada dalam batas kecepatan dan jalur.</p>
+<div class="lad"><div>Level 4: Optimisasi / perencanaan (target ekonomi: minimalkan energi, maksimalkan produksi)</div><div class="hl">Level 3: <b>APC / MPC</b> (multivariabel, berbasis model, menangani constraint)</div><div>Level 2: ARC (cascade, feedforward, ratio, override) di blok DCS</div><div>Level 1: Kontrol regulatori PID (inilah yang Anda tuning di tab Simulator PID)</div><div>Level 0: Sensor, aktuator, dan proses</div></div>
+<p class="note">Cascade dan feedforward yang rumit di DCS disebut ARC, bukan APC. MPC bekerja dengan mengirim setpoint ke loop PID di bawahnya, sehingga PID yang buruk akan menggagalkan APC.</p>
+<h3>PID vs MPC</h3><div class="tw"><table><tr><th>Aspek</th><th>PID</th><th>MPC (APC)</th></tr>
+<tr><td>Jumlah variabel</td><td>Satu CV dengan satu MV per loop</td><td>Banyak MV dan CV sekaligus</td></tr>
+<tr><td>Cara kerja</td><td>Bereaksi pada error saat ini</td><td>Memprediksi perilaku proses ke depan memakai model</td></tr>
+<tr><td>Interaksi dan dead time</td><td>Sulit, loop saling mengganggu</td><td>Ditangani langsung oleh matriks model</td></tr>
+<tr><td>Constraint</td><td>Hanya batas output dan anti-windup</td><td>Dioptimasi eksplisit untuk MV, perubahan MV, dan CV</td></tr>
+<tr><td>Tujuan</td><td>Menjaga PV di setpoint</td><td>Menjaga CV di target atau zona sambil mengejar tujuan ekonomi</td></tr>
+<tr><td>Usaha</td><td>Ringan dan cepat dipasang</td><td>Butuh plant test, model, dan perawatan berkelanjutan</td></tr></table></div></div>
+<div class="card"><h2>2. APC dari brand Schneider Electric</h2>
+<p>Solusi MPC Schneider Electric berasal dari <b>Connoisseur</b>, perangkat lunak multivariable predictive control yang dikembangkan oleh Predictive Control Ltd (Inggris) dan berakar dari riset Dr. David Sandoz di University of Manchester pada awal 1980-an. Foxboro mengakuisisinya pada 1998. Setelah itu Connoisseur menjadi bagian dari I/A Series Control Suite (kini keluarga EcoStruxure Foxboro DCS) dan dipasarkan juga lewat unit SimSci.</p>
+<ul><li><b>Model:</b> time-series MIMO linear, diidentifikasi dari data uji pabrik dengan recursive least squares. Mendukung adaptive control dan multiple model.</li><li><b>Optimisasi:</b> memakai model dan linear programming untuk mencari setpoint paling ekonomis tanpa melanggar constraint.</li><li><b>Arsitektur:</b> host-based (di server) atau embedded di control processor DCS (misalnya CP60) untuk proses cepat seperti combustion. Connoisseur Bridge menghubungkan Connoisseur dengan DCS Foxboro.</li><li><b>Alur proyek:</b> unit response testing, model identification, control design dan simulasi, instalasi dan commissioning, integrasi dengan DCS.</li></ul>
+<p class="note">Ringkasan ini berdasar dokumentasi publik Foxboro/Schneider. Nama produk dan fitur versi terbaru dapat berbeda, jadi rujuk datasheet resmi Schneider Electric. Sebagai pembanding, Pavilion8 yang sering dijumpai di industri semen adalah produk Rockwell Automation, bukan Schneider. Prinsip MPC-nya sama.</p></div>
+<div class="card"><h2>3. Cara kerja MPC</h2>
+<p>Alur sederhananya sebagai berikut (berulang setiap siklus, misalnya tiap 30 detik sampai 1 menit):</p>
+<div class="fl"><div>Proses di plant</div><span>→</span><div>Pengukuran CV dan DV</div><span>→</span><div>Model + koreksi bias (prediksi ke depan)</div><span>→</span><div>Optimizer (target, bobot, constraint)</div><span>→</span><div>Setpoint ke loop PID di DCS</div><span>→</span><div>Proses di plant</div></div>
+<ol><li><b>Variabel.</b> MV (manipulated variable, yang diatur, misalnya feed bahan bakar), CV (controlled variable, yang dikendalikan, misalnya temperatur), DV (disturbance variable, gangguan terukur, misalnya laju umpan).</li><li><b>Model.</b> Matriks model (gain, dead time, konstanta waktu) untuk setiap pasangan MV/DV terhadap CV.</li><li><b>Prediksi.</b> Pada setiap siklus, model memprediksi CV sepanjang prediction horizon P jika MV tidak diubah, lalu dikoreksi dengan selisih antara pengukuran dan prediksi (bias, sebagai umpan balik).</li><li><b>Optimisasi.</b> Hitung deret perubahan MV sepanjang control horizon M yang meminimalkan <code>J = Σ wCV·(CV − target)² + Σ λ·ΔMV²</code> dengan batas MV, ΔMV, dan CV.</li><li><b>Receding horizon.</b> Hanya langkah pertama ΔMV yang dijalankan (biasanya sebagai setpoint loop PID). Pada siklus berikut seluruh perhitungan diulang dengan data terbaru. Alasannya, model tidak pernah sempurna, jadi rencana lama dikoreksi oleh pengukuran terbaru.</li></ol>
+<h3>Contoh pada kiln semen</h3>
+<p>Nama variabel berbeda di setiap pabrik, contoh umumnya: <b>MV</b> berupa feed bahan bakar, putaran kiln, kecepatan ID fan, dan feed umpan. <b>CV</b> berupa temperatur burning zone, O₂ dan CO di back end, temperatur keluar preheater, dan torsi kiln. <b>DV</b> berupa perubahan terukur pada umpan atau bahan bakar. Menaikkan bahan bakar menaikkan temperatur, tetapi juga mengubah O₂ dan CO. Jika tiap CV dikendalikan loop PID sendiri, loop-loop itu saling berebut. MPC menghitung semuanya sekaligus.</p>
+<p>Contoh model 2×2 (dua MV, dua CV), dengan g adalah gain tiap pasangan: <code>ΔCV1 = g11·ΔMV1 + g12·ΔMV2</code> dan <code>ΔCV2 = g21·ΔMV1 + g22·ΔMV2</code>. Jika g12 dan g21 tidak nol, kedua loop saling memengaruhi. Itulah interaksi yang tidak terlihat oleh PID tunggal.</p></div>
+<div class="card"><h2>4. Process tuning pada APC</h2>
+<ol><li><b>Prasyarat:</b> instrumen sehat, aktuator tidak macet, loop PID dasar sudah di-tuning dengan baik.</li><li><b>Plant test:</b> step test (ubah satu MV bertahap) atau uji perturbasi acak (PRBS) sambil mencatat semua CV. Durasi uji minimal beberapa kali settling time proses.</li><li><b>Identifikasi model:</b> estimasi gain, dead time, dan dinamika tiap pasangan MV-CV. Periksa tanda gain, kesesuaian dengan logika proses, dan kualitas fit.</li><li><b>Tuning controller:</b> atur horizon, move suppression, bobot CV, prioritas constraint (lihat tabel di bawah).</li><li><b>Simulasi offline</b> dengan model, termasuk skenario model mismatch dan gangguan.</li><li><b>Commissioning bertahap:</b> mulai prediksi saja, lalu closed loop pada beberapa MV, lalu penuh. Pantau service factor dan manfaat (benefit).</li></ol>
+<h3>Masalah yang sering terjadi</h3>
+<ul><li>Valve stiction, backlash, atau sensor drift membuat data uji dan hasil kontrol buruk.</li><li>Plant test terganggu perubahan lain (gangguan, operator mengubah setpoint) sehingga model tidak akurat.</li><li>Tanda atau besar gain model salah, sehingga kontroler memberi aksi ke arah yang keliru.</li><li>Constraint terlalu ketat sehingga target CV tidak bisa dicapai.</li><li>Operator tidak percaya lalu mematikan APC, sehingga service factor rendah. Pelatihan operator sama pentingnya dengan model yang bagus.</li></ul>
+<p class="note">Manfaat umum APC: variasi proses turun, sehingga setpoint bisa didorong lebih dekat ke batas (misalnya menurunkan konsumsi energi) tanpa melanggar constraint.</p></div>
+<div class="card"><h2>5. Parameter dan metoda tuning MPC</h2><div class="tw"><table><tr><th>Parameter</th><th>Fungsi</th><th>Pedoman umum</th></tr>
+<tr><td>Prediction horizon P</td><td>Seberapa jauh ke depan CV diprediksi</td><td>Mencakup settling time proses. Terlalu pendek membuat kontrol tidak stabil.</td></tr>
+<tr><td>Control horizon M</td><td>Jumlah langkah MV yang dioptimasi</td><td>Kecil (sekitar 2–5) sudah cukup dan lebih robust.</td></tr>
+<tr><td>Move suppression λ</td><td>Penalti besar perubahan MV</td><td>Naikkan untuk respons lebih halus dan robust terhadap mismatch. Turunkan untuk respons lebih cepat.</td></tr>
+<tr><td>Bobot / prioritas CV</td><td>CV mana yang didahulukan saat konflik</td><td>Constraint keselamatan dan kualitas di prioritas teratas.</td></tr>
+<tr><td>Limit MV, ΔMV, CV (hard/soft)</td><td>Batas operasi yang tidak boleh dilanggar</td><td>Gunakan soft constraint pada CV agar solusi tetap feasible.</td></tr>
+<tr><td>Filter feedback / bias</td><td>Redaman koreksi dari selisih model dan pengukuran</td><td>Naikkan filter jika pengukuran berisik.</td></tr></table></div>
+<p class="note">Metoda yang lazim: identifikasi model dari plant test (step/PRBS, kuadrat terkecil), kemudian tuning iteratif lewat simulasi: atur λ dan horizon sampai respons memenuhi target (overshoot, settling time) dan tetap stabil saat gain model diubah ±30–50%. Ini aturan praktis umum, bukan resep khusus produk tertentu.</p></div>
+<div class="card"><h2>6. Demo interaktif: MPC (DMC) satu variabel</h2>
+<p>Proses: orde satu dengan dead time (K = 1, τ = 10 s, θ = 2 s). Setpoint naik dari 0 ke 1 pada detik 5, gangguan output −0,3 masuk pada detik 80. Ubah parameter tuning dan amati responsnya.</p>
+<div class="demo"><div class="dctl"><div class="sl"><div class="h"><span>Prediction horizon P</span><b id="vdP"></b></div><input type="range" id="dP" min="5" max="60" step="1" value="30"></div><div class="sl"><div class="h"><span>Control horizon M</span><b id="vdM"></b></div><input type="range" id="dM" min="1" max="8" step="1" value="3"></div><div class="sl"><div class="h"><span>Move suppression λ</span><b id="vdL"></b></div><input type="range" id="dL" min="0" max="10" step="0.05" value="0.5"></div>
+<div class="sl"><div class="h"><span>Batas atas MV</span><b id="vdU"></b></div><input type="range" id="dU" min="1.05" max="4" step="0.05" value="2"></div><div class="sl"><div class="h"><span>Gain proses / gain model</span><b id="vdG"></b></div><input type="range" id="dG" min="0.4" max="2.5" step="0.05" value="1"></div>
+<div class="sl"><div class="h"><span>Waktu prediksi t (detik)</span><b id="vdK"></b></div><input type="range" id="dK" min="0" max="100" step="1" value="6"></div>
+<label style="display:flex;gap:6px;align-items:center;color:var(--tx);margin-top:10px"><input type="checkbox" id="dB" checked style="width:auto"> Tampilkan PID pembanding</label></div>
+<div class="dch"><div class="leg"><span><i style="background:var(--c1)"></i>Biru: PV (hasil proses yang dikendalikan)</span><span><i style="background:var(--sp)"></i>Abu-abu putus-putus: setpoint (target)</span><span><i style="background:var(--c3)"></i>Hijau: PV jika memakai PID (PI) sebagai pembanding</span><span><i style="background:var(--c4)"></i>Ungu putus-putus: prediksi MPC dari waktu t yang dipilih (garis vertikal abu-abu)</span></div><canvas id="c3" height="190"></canvas><div class="leg"><span><i style="background:var(--c2)"></i>Oranye: MV (aksi kontroler ke aktuator, dibatasi 0 sampai batas atas MV)</span><span><i style="background:var(--c3)"></i>Hijau: MV dari PID</span><span><i style="background:var(--c4)"></i>Ungu putus-putus: rencana MV ke depan menurut MPC</span></div><canvas id="c4" height="100"></canvas></div></div>
+<p class="note" id="dn"></p>
+<p><b>Cara membaca:</b> setelah setpoint naik pada detik 5, MPC menaikkan MV (oranye) agar PV (biru) naik mengikuti target. Pada detik 80 gangguan menurunkan PV, lalu MV naik untuk mengompensasinya. Waktu x pada sumbu adalah detik.</p>
+<ul><li>Naikkan λ: MV makin halus dan PV makin lambat.</li><li>Turunkan batas atas MV mendekati 1: MV terpotong sehingga respons melambat (constraint bekerja).</li><li>Ubah gain proses / gain model menjadi 2 atau lebih: model tidak cocok dengan proses, respons jadi berosilasi. Naikkan λ untuk menstabilkannya.</li><li>Perkecil P: horizon terlalu pendek membuat kontrol kurang stabil.</li><li>Geser slider “Waktu prediksi t”: garis ungu menunjukkan perkiraan MPC tentang PV dan rencana MV ke depan pada saat itu (tanpa memperhitungkan batas MV pada PV prediksi). PID tidak punya prediksi seperti ini, karena hanya bereaksi pada selisih saat ini. Pada setiap siklus rencana dihitung ulang dan hanya langkah pertamanya yang dijalankan (receding horizon). Prediksi bisa sedikit melewati setpoint karena hanya M langkah gerak yang dioptimasi, lalu rencana dikoreksi lagi pada siklus berikutnya.</li><li>Pada proses satu variabel yang sederhana ini, PID yang di-tuning baik bisa hampir sama bagusnya. Keunggulan MPC terlihat pada banyak variabel yang saling berinteraksi dan pada constraint yang harus dijaga bersamaan. Naikkan gain proses atau turunkan batas MV untuk melihat bedanya pada demo ini.</li></ul></div>
+<div class="card"><h2>7. Glosarium</h2><div class="tw"><table><tr><th>Istilah</th><th>Arti singkat</th></tr>
+<tr><td>MV</td><td>Manipulated variable, variabel yang diatur kontroler (feed, putaran, bukaan valve)</td></tr>
+<tr><td>CV</td><td>Controlled variable, variabel yang ingin dijaga (temperatur, tekanan, O₂)</td></tr>
+<tr><td>DV</td><td>Disturbance variable, gangguan yang terukur dan tidak bisa diatur</td></tr>
+<tr><td>Gain</td><td>Seberapa besar CV berubah untuk perubahan MV sebesar satu satuan</td></tr>
+<tr><td>Dead time</td><td>Jeda waktu antara MV diubah dan CV mulai bereaksi</td></tr>
+<tr><td>Settling time</td><td>Waktu yang dibutuhkan proses mencapai kondisi baru setelah perubahan</td></tr>
+<tr><td>Constraint</td><td>Batas yang tidak boleh dilanggar (batas MV, laju perubahan MV, batas CV)</td></tr>
+<tr><td>Horizon</td><td>Jumlah langkah waktu ke depan yang dihitung (prediction) atau dioptimasi (control)</td></tr>
+<tr><td>Move suppression</td><td>Penalti yang membuat MV berubah lebih halus</td></tr>
+<tr><td>Bias</td><td>Selisih antara pengukuran dan prediksi model, dipakai untuk koreksi umpan balik</td></tr>
+<tr><td>Step test / PRBS</td><td>Uji plant dengan perubahan MV bertahap atau acak untuk mengidentifikasi model</td></tr>
+<tr><td>Service factor</td><td>Persentase waktu APC aktif dan mengendalikan proses</td></tr></table></div></div>
+<div class="card qs"><h2>8. Pertanyaan diskusi</h2><ol><li>Mengapa λ yang lebih besar membuat MPC lebih tahan terhadap model mismatch?</li><li>Apa yang terjadi saat batas atas MV diturunkan mendekati nilai steady state? Bandingkan dengan windup pada PID.</li><li>Mengapa loop PID dasar harus di-tuning sebelum APC dipasang?</li><li>Pada kasus tuning di tab Simulator PID, di mana MPC memberi keuntungan dibanding PID tunggal?</li></ol></div>
+</div></div>
+<script>
+const CASES={
+temp:{n:"Temperatur pemanas / preheater",u:"°C",y0:200,sp:225,K:2,tau:120,th:20,T:1000,int:0,ds:-10},
+pres:{n:"Tekanan header udara / steam",u:"bar",y0:4,sp:4.5,K:0.06,tau:15,th:3,T:200,int:0,ds:-10},
+lvl:{n:"Level tangki (proses integrator)",u:"%",y0:50,sp:60,K:0.05,tau:0,th:5,T:400,int:1,ds:-10},
+spd:{n:"Kecepatan belt conveyor (VFD)",u:"m/mnt",y0:60,sp:70,K:1.2,tau:6,th:1,T:80,int:0,ds:-10}};
+const U0=50,$=id=>document.getElementById(id);
+let cur="temp",pl={},runs=[],active=null;
+const COL=["--c2","--c3","--c4"];
+const fm=x=>!isFinite(x)?"–":Math.abs(x)>=100?x.toFixed(1):Math.abs(x)>=10?x.toFixed(2):x.toFixed(3);
+$("cs").innerHTML=Object.entries(CASES).map(([k,c])=>`<option value="${k}">${c.n}</option>`).join("");
+function readPlant(){const c=CASES[cur];pl={K:+$("K").value,tau:+$("tau").value,th:Math.max(+$("th").value,0.01),int:c.int};}
+function tune(m,tp,p){
+ const {K,tau,th,int}=p,r=int?0:th/tau,g=int?1/(K*th):tau/(K*th);let kp,ti=0,td=0;
+ if(m==="zn"){kp=g*(tp==="P"?1:tp==="PI"?0.9:1.2);ti=tp==="P"?0:tp==="PI"?3.33*th:2*th;td=tp==="PID"?0.5*th:0;}
+ else if(m==="cc"){
+  if(tp==="P")kp=g*(1+r/3);
+  else if(tp==="PI"){kp=g*(0.9+r/12);ti=th*(30+3*r)/(9+20*r);}
+  else{kp=g*(4/3+r/4);ti=th*(32+6*r)/(13+8*r);td=4*th/(11+2*r);}}
+ else if(m==="imc"){
+  if(int){const l=2*th;kp=(2*l+th)/(K*(l+th)**2);ti=2*l+th;td=tp==="PID"?th*(l+th/3)/(2*l+th):0;if(tp==="P"){kp=1/(K*(l+th));ti=0;}}
+  else{const l=Math.max(tau/3,th);
+   if(tp==="PID"){kp=(tau+th/2)/(K*(l+th/2));ti=tau+th/2;td=tau*th/(2*tau+th);}
+   else{kp=tau/(K*(l+th));ti=tp==="PI"?tau:0;}}}
+ else if(m==="simc"){
+  if(int){kp=1/(K*2*th);ti=tp==="P"?0:8*th;}
+  else{kp=tau/(K*2*th);ti=tp==="P"?0:Math.min(tau,8*th);}
+  td=tp==="PID"?(int?0:0):0;}
+ return {kp,ti,td};}
+function setSliders(v){
+ const g=pl.int?1/(pl.K*pl.th):pl.tau/(pl.K*pl.th);
+ const kM=Math.max(3.6*g,v.kp*1.3),tM=Math.max(pl.int?30*pl.th:3*pl.tau,v.ti*1.3),dM=Math.max(2*pl.th+(pl.int?0:pl.tau/4),v.td*1.3);
+ $("kp").max=kM;$("kp").step=kM/1000;$("ti").max=tM;$("ti").step=tM/1000;$("td").max=dM;$("td").step=dM/1000;
+ $("kp").value=v.kp;$("ti").value=v.ti;$("td").value=v.td;}
+function loadCase(){
+ const c=CASES[cur];$("K").value=c.K;$("tau").value=c.tau;$("th").value=c.th;$("sp").value=c.sp;$("ds").value=c.ds;$("T").value=c.T;
+ $("tau").disabled=!!c.int;$("lK").textContent=c.int?"K′ ("+c.u+"/s per %)":"K ("+c.u+" per %)";$("lsp").textContent="Setpoint baru ("+c.u+")";
+ $("t1").textContent="Respons PV ("+c.u+") — "+c.n;readPlant();runs=[];$("mt").value="zn";$("tp").value="PID";applyMethod();}
+function applyMethod(){readPlant();const m=$("mt").value;if(m!=="man")setSliders(tune(m,$("tp").value,pl));else setSliders({kp:+$("kp").value,ti:+$("ti").value,td:+$("td").value});run();}
+function sim(){
+ const c=CASES[cur],{K,tau,th,int}=pl,T=+$("T").value||c.T,sp1=+$("sp").value,ds=+$("ds").value,kp=+$("kp").value,ti=+$("ti").value,td=+$("td").value;
+ const N=4000,dt=T/N,ts=0.05*T,tdist=0.55*T,nd=Math.round(th/dt),buf=new Array(nd).fill(U0);
+ let y=c.y0,I=0,dp=0,yp=y;const t=[],pv=[],spv=[],u=[];
+ for(let i=0;i<=N;i++){
+  const tt=i*dt,s=tt>=ts?sp1:c.y0,e=s-y;
+  if(td>0){const Tf=td/8;dp=(Tf*dp-kp*td*(y-yp))/(Tf+dt);}else dp=0;
+  const uu=U0+kp*e+I+dp,us=Math.min(100,Math.max(0,uu));
+  if(ti>0)I+=dt*(kp/ti*e+(us-uu)/ti);
+  yp=y;t.push(tt);pv.push(y);spv.push(s);u.push(us);
+  buf.push(us+(tt>=tdist?ds:0));const ud=buf.shift();
+  y+=int?dt*K*(ud-U0):dt/tau*(-(y-c.y0)+K*(ud-U0));
+  if(!isFinite(y)||Math.abs(y)>1e7){y=NaN;break;}}
+ return {t,pv,spv,u,ts,tdist,sp1,y0:c.y0,kp,ti,td,T};}
+function metrics(r){
+ const {t,pv,ts,tdist,sp1,y0}=r,d=sp1-y0,s=Math.sign(d)||1;let pk=y0,t10=null,t90=null,tl=ts,iae=0,dev=0;
+ const dt=t[1]-t[0];
+ for(let i=0;i<t.length;i++){const x=t[i],y=pv[i];
+  if(x>=ts&&x<tdist){if(s*(y-pk)>0)pk=y;
+   if(t10===null&&s*(y-y0)>=0.1*Math.abs(d))t10=x;if(t90===null&&s*(y-y0)>=0.9*Math.abs(d))t90=x;
+   if(Math.abs(y-sp1)>0.02*Math.abs(d))tl=x;}
+  if(x>=tdist)dev=Math.max(dev,Math.abs(y-sp1));
+  iae+=Math.abs((x>=ts?sp1:y0)-y)*dt;}
+ const os=Math.max(0,s*(pk-sp1)/Math.abs(d)*100),ok=isFinite(pv[pv.length-1]);
+ return {os,rise:t90!==null&&t10!==null?t90-t10:NaN,set:ok&&tl<tdist-1e-9?tl-ts:NaN,iae,dev};}
+function run(){const r=sim();active=r;draw();}
+function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function chart(cv,series,yl,xmax){
+ const dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=+(cv.dataset.h||cv.getAttribute("height"));cv.dataset.h=H;cv.style.height=H+"px";cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);
+ const g=cv.getContext("2d");g.scale(dpr,dpr);g.clearRect(0,0,W,H);
+ const tx=css("--tx"),mu=css("--mut"),bd=css("--bd"),L=52,R=10,Tp=8,B=26;
+ let lo=1e18,hi=-1e18;series.forEach(s=>s.y.forEach(v=>{if(isFinite(v)){lo=Math.min(lo,v);hi=Math.max(hi,v);}}));
+ if(yl){lo=Math.min(lo,yl[0]);hi=Math.max(hi,yl[1]);}
+ const pd=(hi-lo)*0.08||1;lo-=pd;hi+=pd;
+ const X=v=>L+v/xmax*(W-L-R),Y=v=>Tp+(1-(v-lo)/(hi-lo))*(H-Tp-B);
+ g.font="11px system-ui";g.lineWidth=1;g.strokeStyle=bd;g.fillStyle=mu;
+ for(let i=0;i<=5;i++){const v=lo+(hi-lo)*i/5,yy=Y(v);g.beginPath();g.moveTo(L,yy);g.lineTo(W-R,yy);g.stroke();g.textAlign="right";g.fillText(fm(v),L-5,yy+4);}
+ for(let i=0;i<=6;i++){const v=xmax*i/6,xx=X(v);g.textAlign="center";g.fillText(Math.round(v)+" s",xx,H-8);}
+ series.forEach(s=>{g.beginPath();g.strokeStyle=s.c;g.lineWidth=s.w||2;g.setLineDash(s.d||[]);let st=false;
+  for(let i=0;i<s.y.length;i+=(s.y.length>300?2:1)){if(!isFinite(s.y[i]))break;const xx=X(s.x[i]),yy=Y(s.y[i]);st?g.lineTo(xx,yy):g.moveTo(xx,yy);st=true;}
+  g.stroke();g.setLineDash([]);});}
+function draw(){
+ if(!active)return;const r=active,lab=r2=>`${$("mt").selectedOptions[0].text.split(" ")[0]} ${$("tp").value}`;
+ const s1=[{x:r.t,y:r.spv,c:css("--sp"),d:[6,4],w:1.5}];
+ runs.forEach((q,i)=>s1.push({x:q.r.t,y:q.r.pv,c:css(COL[i]),w:1.8}));
+ s1.push({x:r.t,y:r.pv,c:css("--c1"),w:2.4});
+ chart($("c1"),s1,null,r.T);chart($("c2"),[{x:r.t,y:r.u,c:css("--c1"),w:2}],[0,100],r.T);
+ $("leg").innerHTML=`<span><i style="background:${css("--sp")}"></i>Setpoint</span><span><i style="background:${css("--c1")}"></i>Aktif: ${lab()} (Kp ${fm(r.kp)}, Ti ${fm(r.ti)}, Td ${fm(r.td)})</span>`+runs.map((q,i)=>`<span><i style="background:${css(COL[i])}"></i>${q.l}</span>`).join("");
+ const m=metrics(r);
+ $("mt2").innerHTML=[["Overshoot",isFinite(m.os)?m.os.toFixed(1)+" %":"–"],["Rise time 10–90%",isFinite(m.rise)?fm(m.rise)+" s":"–"],["Settling time (2%)",isFinite(m.set)?fm(m.set)+" s":"tidak settle"],["IAE",fm(m.iae)],["Deviasi maks. akibat gangguan",fm(m.dev)+" "+CASES[cur].u]].map(a=>`<div class="m"><span>${a[0]}</span><b>${a[1]}</b></div>`).join("");
+ const D={man:"Mode manual: geser slider Kp, Ti, Td.",zn:"Ziegler–Nichols reaction curve: cepat dan agresif, overshoot biasanya besar (rasio peluruhan ¼).",cc:"Cohen–Coon: dirancang untuk proses dengan dead time besar, respons agresif terhadap gangguan.",imc:"IMC / Lambda: Ti mengikuti τ proses; λ dipilih sebagai kompromi kecepatan dan ketahanan (λ = τ/3, minimal θ; integrator λ = 2θ).",simc:"SIMC (Skogestad), τc = θ: respons halus dan robust dengan overshoot kecil; sangat cocok sebagai titik awal di lapangan."};
+ $("vkp").textContent=fm(r.kp);$("vti").textContent=fm(r.ti);$("vtd").textContent=fm(r.td);
+ $("desc").textContent=D[$("mt").value]+(CASES[cur].int&&$("mt").value==="simc"?" Untuk integrator SIMC menghasilkan PI.":"");}
+["kp","ti","td"].forEach(id=>$(id).addEventListener("input",()=>{$("mt").value="man";run();}));
+["K","tau","th","sp","ds","T"].forEach(id=>$(id).addEventListener("change",()=>{readPlant();if($("mt").value!=="man")setSliders(tune($("mt").value,$("tp").value,pl));run();}));
+$("mt").addEventListener("change",applyMethod);$("tp").addEventListener("change",applyMethod);
+$("cs").addEventListener("change",()=>{cur=$("cs").value;loadCase();});
+$("add").addEventListener("click",()=>{if(!active)return;if(runs.length>=3)runs.shift();runs.push({r:active,l:`${$("mt").selectedOptions[0].text.split(" ")[0]} ${$("tp").value} (Kp ${fm(active.kp)}, Ti ${fm(active.ti)}, Td ${fm(active.td)})`});draw();});
+$("clr").addEventListener("click",()=>{runs=[];draw();});
+window.addEventListener("resize",draw);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+function dmcRun(){
+ const P=+$("dP").value,M=Math.min(+$("dM").value,P),lam=+$("dL").value,umax=+$("dU").value,mm=+$("dG").value,N=160,nd=2,a=Math.exp(-0.1);
+ $("vdP").textContent=P;$("vdM").textContent=M;$("vdL").textContent=lam.toFixed(2);$("vdU").textContent=umax.toFixed(2);$("vdG").textContent=mm.toFixed(2);$("vdK").textContent=$("dK").value;
+ const s=i=>i<=nd?0:1-Math.pow(a,i-nd),G=[];
+ for(let i=1;i<=P;i++){G.push([]);for(let j=0;j<M;j++)G[i-1].push(i-j>=1?s(i-j):0);}
+ const A=[];for(let r=0;r<M;r++){A.push([]);for(let c=0;c<M;c++){let v=r===c?lam+1e-9:0;for(let i=0;i<P;i++)v+=G[i][r]*G[i][c];A[r].push(v);}for(let c=0;c<M;c++)A[r].push(r===c?1:0);}
+ for(let i=0;i<M;i++){let p=i;for(let r=i+1;r<M;r++)if(Math.abs(A[r][i])>Math.abs(A[p][i]))p=r;[A[i],A[p]]=[A[p],A[i]];
+  for(let r=0;r<M;r++)if(r!==i){const f=A[r][i]/A[i][i];for(let c=i;c<2*M;c++)A[r][c]-=f*A[i][c];}}
+ const Ai=A.map((row,i)=>row.slice(M).map(v=>v/row[i])),x=Ai.map(row=>row[0]),k1=G.map(row=>row.reduce((q,g,j)=>q+g*x[j],0));
+ let ym=0,yp=0,u=0,yq=0,uq=0,eq=0,pr=null;const KC=2.5,TI=10,kp=+$("dK").value,bm=[0,0],bp=[0,0],bq=[0,0],t=[],y=[],sp=[],uu=[],y2=[],u2=[];
+ for(let k=0;k<=N;k++){
+  const r=k>=5?1:0,meas=yp+(k>=80?-0.3:0),bias=meas-ym;
+  let yf=ym;const b=bm.slice(),fr=[];
+  for(let i=0;i<P;i++){b.push(u);yf=a*yf+(1-a)*b.shift();fr.push(yf);}
+  let du=0;for(let i=0;i<P;i++)du+=k1[i]*(r-(fr[i]+bias));
+  if(k===kp){const e=fr.map(f=>r-(f+bias)),g=[];for(let j=0;j<M;j++){let q=0;for(let i=0;i<P;i++)q+=G[i][j]*e[i];g.push(q);}const dU=Ai.map(row=>row.reduce((q,v,c)=>q+v*g[c],0));pr={x:[],y:[],ux:[],uy:[]};let cu=u;for(let i=0;i<P;i++){let s2=fr[i]+bias;for(let j=0;j<M;j++)s2+=G[i][j]*dU[j];pr.x.push(k+i+1);pr.y.push(s2);if(i<M)cu+=dU[i];pr.ux.push(k+i);pr.uy.push(Math.min(umax,Math.max(0,cu)));}}
+  let un=Math.min(umax,Math.max(0,u+du));if(!isFinite(un))un=0;
+  t.push(k);y.push(meas);sp.push(r);uu.push(un);
+  bm.push(un);ym=a*ym+(1-a)*bm.shift();bp.push(un);yp=a*yp+(1-a)*mm*bp.shift();u=un;
+  const me=yq+(k>=80?-0.3:0),ee=r-me;let ui=uq+KC*(ee-eq)+KC/TI*ee;ui=Math.min(umax,Math.max(0,ui));if(!isFinite(ui))ui=0;y2.push(me);u2.push(ui);eq=ee;bq.push(ui);yq=a*yq+(1-a)*mm*bq.shift();uq=ui;}
+ if(pr){pr.x.unshift(kp);pr.y.unshift(y[kp]);}
+ const ia=z=>z.reduce((q,v,i)=>q+Math.abs((i>=5?1:0)-v),0).toFixed(1),sh=$("dB").checked;
+ const s3=[{x:t,y:sp,c:css("--sp"),d:[6,4],w:1.5}],s4=[];
+ if(sh){s3.push({x:t,y:y2,c:css("--c3"),w:2});s4.push({x:t,y:u2,c:css("--c3"),w:1.8});}
+ s3.push({x:t,y:y,c:css("--c1"),w:2.4});
+ s3.push({x:[kp,kp],y:[-0.2,1.2],c:css("--mut"),w:1});s4.push({x:[kp,kp],y:[0,umax],c:css("--mut"),w:1});
+ if(pr){s3.push({x:pr.x,y:pr.y,c:css("--c4"),d:[5,4],w:2.4});s4.push({x:pr.ux,y:pr.uy,c:css("--c4"),d:[5,4],w:2});}
+ s4.push({x:t,y:uu,c:css("--c2"),w:2});
+ chart($("c3"),s3,null,N);
+ chart($("c4"),s4,[0,umax],N);
+ const pk=Math.max(...y.slice(5,80));$("dn").textContent="Puncak PV sebelum gangguan: "+pk.toFixed(2)+" (setpoint 1,00)"+(pk>1.02?", artinya overshoot "+((pk-1)*100).toFixed(0)+"%.":", praktis tanpa overshoot.")+(Math.max(...uu)>=umax-1e-6?" MV sempat menyentuh batas atas, jadi respons diperlambat oleh constraint.":"")+" IAE MPC = "+ia(y)+", IAE PID = "+ia(y2)+" (makin kecil makin baik).";}
+["dP","dM","dL","dU","dG","dK","dB"].forEach(id=>$(id).addEventListener("input",dmcRun));
+function showTab(n){$("v1").hidden=n!==1;$("v2").hidden=n!==2;$("tb1").classList.toggle("on",n===1);$("tb2").classList.toggle("on",n===2);n===1?draw():dmcRun();}
+$("tb1").addEventListener("click",()=>showTab(1));$("tb2").addEventListener("click",()=>showTab(2));
+window.addEventListener("resize",()=>{if(!$("v2").hidden)dmcRun();});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(!$("v2").hidden)dmcRun();});
+loadCase();
+</script>
+<script src="pwa.js"></script>
+</body>
+</html>
