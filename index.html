@@ -33,7 +33,7 @@ canvas{width:100%;display:block}
 .m{border:1px solid var(--bd);border-radius:8px;padding:8px 10px}.m span{display:block;font-size:12px;color:var(--mut)}.m b{font-size:17px;font-variant-numeric:tabular-nums}
 .note{font-size:12.5px;color:var(--mut);margin:8px 0 0}
 .leg{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;margin-top:6px}.leg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
-.tabs{display:flex;gap:6px;padding:10px 18px 0;max-width:1280px;margin:0 auto}.tabs button.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 18px 0;max-width:1280px;margin:0 auto}.tabs button.on{background:var(--ac);color:var(--bg);border-color:var(--ac)}
 .ap p,.ap li{font-size:14px;margin:6px 0}.ap ul,.ap ol{margin:6px 0;padding-left:20px}.ap code{background:var(--bg);padding:1px 5px;border-radius:5px;font-size:13px}
 .lad div{padding:7px 10px;border:1px solid var(--bd);border-radius:8px;margin:5px 0;font-size:13.5px}.lad div.hl{border-color:var(--ac);background:var(--bg)}
 .tw{overflow-x:auto}.ap table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}.ap td,.ap th{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left;vertical-align:top}.ap th{color:var(--mut);font-weight:600}
@@ -49,7 +49,7 @@ canvas{width:100%;display:block}
 </head>
 <body>
 <header><h1>Simulator Tuning PID</h1><p>Pilih kasus proses, pilih metoda tuning atau atur P, I, D secara manual, lalu amati respons pada grafik.</p></header>
-<div class="tabs"><button id="tb1" class="on">Simulator PID</button><button id="tb2">Pengantar APC</button><button id="inst" hidden style="margin-left:auto">Pasang aplikasi</button></div>
+<div class="tabs"><button id="tb1" class="on">Simulator PID</button><button id="tbp">Pengantar PID</button><button id="tb2">Pengantar APC</button><button id="inst" hidden style="margin-left:auto">Pasang aplikasi</button></div>
 <div id="v1"><div class="wrap">
 <div class="card" id="ctl">
 <h2>Pengaturan</h2>
@@ -71,6 +71,47 @@ canvas{width:100%;display:block}
 <div class="card"><h2>Output kontroler (CV, %)</h2><canvas id="c2" height="170"></canvas></div>
 <div class="card"><h2>Indikator kinerja (run aktif)</h2><div class="mt" id="mt2"></div><p class="note" id="desc"></p></div>
 </div>
+</div></div>
+<div id="v3" hidden><div class="wrap ap" style="grid-template-columns:minmax(0,1fr)">
+<div class="card"><h2>1. Apa itu PID?</h2>
+<p>PID (Proportional–Integral–Derivative) adalah kontrol umpan balik yang paling banyak dipakai di industri. Kontroler membandingkan setpoint (SP) dengan nilai terukur (PV), menghitung error, lalu mengubah output (MV) ke aktuator seperti valve atau VFD agar error mengecil.</p>
+<div class="fl"><div>Setpoint (SP)</div><span>→</span><div>Error e = SP − PV</div><span>→</span><div>Kontroler PID</div><span>→</span><div>Output MV (valve, VFD)</div><span>→</span><div>Proses</div><span>→</span><div>PV (sensor), diumpan balik ke pengurang</div></div>
+<p><code>u = Kp·( e + (1/Ti)·∫e dt + Td·de/dt )</code></p>
+<p><b>Analogi:</b> mengatur suhu air shower. P: seberapa kuat keran diputar sesuai selisih suhu. I: terus menambah putaran selama suhu belum pas, sampai selisih benar-benar hilang. D: mengerem putaran saat suhu naik terlalu cepat, sebelum melewati target.</p>
+<div class="btns"><button class="p" onclick="showTab(1)">Coba di simulator PID</button></div></div>
+<div class="card"><h2>2. Peran P, I, dan D</h2><div class="tw"><table><tr><th>Aksi</th><th>Fungsi</th><th>Jika dinaikkan</th><th>Kelemahan</th></tr>
+<tr><td>P (Kp)</td><td>Aksi sebanding dengan error saat ini</td><td>Respons lebih cepat, error akhir mengecil, overshoot naik, stabilitas turun</td><td>Tidak menghilangkan error akhir (offset)</td></tr>
+<tr><td>I (Ti kecil = aksi I kuat)</td><td>Mengakumulasi error sampai offset hilang</td><td>Offset hilang, tetapi overshoot dan osilasi naik, settling melambat</td><td>Windup saat output jenuh</td></tr>
+<tr><td>D (Td)</td><td>Meredam laju perubahan error</td><td>Overshoot turun, respons lebih tenang</td><td>Memperbesar efek noise sensor</td></tr></table></div>
+<h3>Pilihan tipe pengendali</h3><ul><li><b>P:</b> level buffer yang tidak butuh ketelitian setpoint.</li><li><b>PI:</b> pilihan paling umum untuk flow, tekanan, kecepatan, dan level.</li><li><b>PID:</b> proses lambat dengan lag besar seperti temperatur. Hindari D pada sinyal yang berisik (flow, tekanan).</li></ul></div>
+<div class="card"><h2>3. Perbedaan metoda tuning</h2><p>Semua metoda mencari Kp, Ti, dan Td. Bedanya ada pada data yang dipakai dan kompromi yang dipilih antara kecepatan, overshoot, dan ketahanan terhadap model yang tidak tepat (robustness). Cobalah satu per satu di tab Simulator PID.</p><div class="tw"><table><tr><th>Metoda</th><th>Prinsip</th><th>Karakter respons</th><th>Cocok untuk</th><th>Kekurangan</th></tr>
+<tr><td>Manual (trial and error)</td><td>Tanpa model. Atur P dulu, lalu I, lalu D sambil mengamati respons</td><td>Tergantung pengalaman</td><td>Loop sederhana, penyetelan akhir di lapangan</td><td>Lama dan mengganggu proses</td></tr>
+<tr><td>Ziegler–Nichols (reaction curve)</td><td>Step test open loop menghasilkan K, τ, θ lalu rumus tetap</td><td>Agresif, overshoot besar (kira-kira peluruhan ¼)</td><td>Proses self-regulating, θ/τ kecil sampai sedang</td><td>Kurang robust, sering perlu dilunakkan</td></tr>
+<tr><td>Ziegler–Nichols (ultimate gain)</td><td>Naikkan Kp sampai berosilasi tetap, ambil Ku dan Pu</td><td>Agresif</td><td>Proses yang aman dibawa ke osilasi</td><td>Berisiko di plant, belum ada di simulator</td></tr>
+<tr><td>Cohen–Coon</td><td>Rumus dari model FOPDT, memperhitungkan dead time</td><td>Agresif, penolakan gangguan baik, redaman kecil</td><td>Dead time relatif besar</td><td>Sensitif terhadap kesalahan model</td></tr>
+<tr><td>IMC / Lambda</td><td>Satu parameter λ (kecepatan loop tertutup), Ti mengikuti τ</td><td>Halus, overshoot kecil, λ besar = lebih lambat dan lebih robust</td><td>Loop yang harus halus atau banyak loop saling terkait</td><td>Lambat menolak gangguan beban jika λ besar</td></tr>
+<tr><td>SIMC (Skogestad)</td><td>Turunan IMC dengan Ti dibatasi agar gangguan beban cepat ditolak</td><td>Seimbang, overshoot kecil</td><td>Titik awal praktis untuk banyak loop</td><td>Perlu model FOPDT yang cukup baik</td></tr></table></div>
+<p class="note">Pedoman memilih: butuh pengikutan setpoint cepat, pilih ZN atau Cohen–Coon lalu lunakkan. Butuh respons halus dan aman, pilih IMC atau SIMC. Apa pun metodanya, hasil perhitungan adalah tuning awal yang harus diuji dan disetel ulang di plant.</p></div>
+<div class="card"><h2>4. Apa pembeda PID dengan APC?</h2>
+<ul><li><b>Jumlah variabel:</b> PID satu CV dengan satu MV. APC mengatur banyak MV dan CV sekaligus beserta interaksinya.</li><li><b>Waktu:</b> PID bereaksi pada error saat ini. APC memprediksi ke depan memakai model proses.</li><li><b>Constraint:</b> PID hanya punya batas output dan anti-windup. APC memasukkan batas MV, laju MV, dan CV ke dalam optimisasi.</li><li><b>Tujuan:</b> PID menjaga PV di setpoint. APC dapat mengejar tujuan ekonomis, misalnya mendorong proses mendekati batas yang aman untuk menghemat energi.</li><li><b>Usaha:</b> PID cepat dipasang. APC butuh plant test, model, dan perawatan.</li><li><b>Hubungan:</b> APC tidak menggantikan PID. APC biasanya menulis setpoint ke loop PID di bawahnya.</li></ul>
+<p><b>Kapan cukup PID?</b> Loop mandiri, interaksi kecil, dan tidak ada constraint yang sering aktif. <b>Kapan perlu APC?</b> Banyak variabel saling memengaruhi, dead time panjang, dan operator sering memindahkan setpoint manual untuk menghindari batas.</p>
+<div class="btns"><button class="p" onclick="showTab(2)">Lihat pengantar APC dan demo prediksi</button></div></div>
+<div class="card"><h2>5. Contoh implementasi di industri semen</h2>
+<p class="note" style="margin-top:0">Ini contoh umum. Nama loop, strategi, dan peralatan berbeda di setiap pabrik.</p>
+<h3>Padanan kasus simulator di pabrik</h3><div class="tw"><table><tr><th>Kasus simulator</th><th>Padanan di pabrik semen</th></tr>
+<tr><td>Temperatur</td><td>Temperatur kalsiner atau preheater, temperatur outlet mill (damper udara panas dan udara dingin)</td></tr>
+<tr><td>Tekanan</td><td>Tekanan kiln hood, tekanan di bawah grate cooler, draft preheater</td></tr>
+<tr><td>Level</td><td>Level hopper atau tangki buffer, level bin umpan</td></tr>
+<tr><td>Kecepatan belt conveyor</td><td>Kecepatan belt feeder atau weigh feeder untuk umpan, batubara, dan bahan koreksi</td></tr></table></div>
+<h3>Loop PID yang umum</h3><div class="tw"><table><tr><th>Area</th><th>Loop</th><th>Catatan</th></tr>
+<tr><td>Kiln dan cooler</td><td>Tekanan hood (lewat kipas exhaust), kecepatan grate dan tekanan bed cooler</td><td>PI cepat, sering dipengaruhi gangguan dari kiln</td></tr>
+<tr><td>Preheater dan kalsiner</td><td>Temperatur keluar cyclone dan kalsiner terhadap bahan bakar</td><td>PID dengan lag dan dead time, sering diberi feedforward dari laju umpan</td></tr>
+<tr><td>Pengumpanan</td><td>Laju umpan kiln, dosing batubara, rasio bahan</td><td>PI cepat dan ratio control</td></tr>
+<tr><td>Raw mill, coal mill, cement mill</td><td>Differential pressure atau beban mill ke laju umpan, temperatur outlet ke damper udara panas, kecepatan separator</td><td>Proses lambat dan berinteraksi. Coal mill menuntut batas keselamatan (temperatur, CO)</td></tr>
+<tr><td>Penggerak</td><td>Loop kecepatan di VFD (belt, kipas, rotary feeder)</td><td>PI internal VFD yang di-tuning oleh vendor</td></tr></table></div>
+<h3>Di mana APC masuk</h3>
+<p>APC di industri semen umumnya diterapkan pada kiln, cooler, dan penggilingan (raw mill, cement mill). Contoh pada kiln: MPC mengoordinasikan bahan bakar, umpan, kecepatan kiln, dan ID fan untuk menjaga burning zone, O₂, CO, dan torsi kiln, lalu mengirim setpoint ke loop PID di DCS. Besar manfaat (energi dan kestabilan klinker) bergantung pada kondisi pabrik masing-masing.</p>
+<h3>Tangga implementasi</h3><ol><li>Pastikan instrumen dan aktuator sehat. Audit kinerja loop PID.</li><li>Tuning PID dasar dengan metoda yang sesuai (IMC atau SIMC untuk loop halus, ZN atau Cohen–Coon untuk loop yang perlu cepat).</li><li>Tambahkan kontrol regulatori lanjut (ARC): cascade, feedforward, ratio.</li><li>Baru pasang APC/MPC di atas loop yang sudah stabil.</li></ol></div>
 </div></div>
 <div id="v2" hidden><div class="wrap ap" style="grid-template-columns:minmax(0,1fr)">
 <div class="card"><h2>1. Apa itu APC?</h2>
@@ -266,8 +307,8 @@ function dmcRun(){
  chart($("c4"),s4,[0,umax],N);
  const pk=Math.max(...y.slice(5,80));$("dn").textContent="Puncak PV sebelum gangguan: "+pk.toFixed(2)+" (setpoint 1,00)"+(pk>1.02?", artinya overshoot "+((pk-1)*100).toFixed(0)+"%.":", praktis tanpa overshoot.")+(Math.max(...uu)>=umax-1e-6?" MV sempat menyentuh batas atas, jadi respons diperlambat oleh constraint.":"")+" IAE MPC = "+ia(y)+", IAE PID = "+ia(y2)+" (makin kecil makin baik).";}
 ["dP","dM","dL","dU","dG","dK","dB"].forEach(id=>$(id).addEventListener("input",dmcRun));
-function showTab(n){$("v1").hidden=n!==1;$("v2").hidden=n!==2;$("tb1").classList.toggle("on",n===1);$("tb2").classList.toggle("on",n===2);n===1?draw():dmcRun();}
-$("tb1").addEventListener("click",()=>showTab(1));$("tb2").addEventListener("click",()=>showTab(2));
+function showTab(n){$("v1").hidden=n!==1;$("v3").hidden=n!==3;$("v2").hidden=n!==2;$("tb1").classList.toggle("on",n===1);$("tbp").classList.toggle("on",n===3);$("tb2").classList.toggle("on",n===2);if(n===1)draw();if(n===2)dmcRun();window.scrollTo(0,0);}
+$("tb1").addEventListener("click",()=>showTab(1));$("tbp").addEventListener("click",()=>showTab(3));$("tb2").addEventListener("click",()=>showTab(2));
 window.addEventListener("resize",()=>{if(!$("v2").hidden)dmcRun();});
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{if(!$("v2").hidden)dmcRun();});
 loadCase();
