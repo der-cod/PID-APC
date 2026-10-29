@@ -1,4 +1,4 @@
-const CACHE = "pidsim-nologin-v2";
+const CACHE = "pidsim-nologin-v3";
 const FILES = ["./", "./index.html", "./pwa.js", "./manifest.webmanifest",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png"];
 self.addEventListener("install", e => {
